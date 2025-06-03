@@ -1,0 +1,46 @@
+{
+  "name": "solana-arb-scanner",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "price-test": "ts-node src/priceTest.ts",
+    "cross-dex-scan": "ts-node src/crossDexArbitrage.ts",
+    "enhanced-scan": "ts-node src/enhancedArbitrageScanner.ts",
+    "quick-csv": "ts-node src/quickCsvTest.ts",
+    "optimized-scan": "ts-node src/optimizedArbitrageScanner.ts",
+    "conservative-scan": "ts-node src/conservativeArbitrageScanner.ts",
+    "real-dex-scan": "ts-node src/realDexArbitrageScanner.ts",
+    "phoenix-scan": "ts-node src/phoenixFocusedScanner.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "solana",
+    "arbitrage",
+    "dex",
+    "scanner"
+  ],
+  "author": "",
+  "license": "ISC",
+  "description": "Solana arbitrage scanner monitoring multiple DEXes",
+  "devDependencies": {
+    "@types/node": "^22.15.29",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.31.1",
+    "@jup-ag/api": "^6.0.42",
+    "@project-serum/anchor": "^0.26.0",
+    "@solana/spl-token": "^0.4.13",
+    "@solana/web3.js": "^1.98.2",
+    "axios": "^1.9.0",
+    "bn.js": "^5.2.2",
+    "csv-writer": "^1.6.0",
+    "decimal.js": "^10.5.0",
+    "dotenv": "^16.5.0",
+    "ws": "^8.18.2"
+  }
+}
