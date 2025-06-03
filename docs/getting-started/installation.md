@@ -1,347 +1,248 @@
 # 🔧 Installation Guide
 
-Get the Solana Arbitrage Scanner up and running in just a few minutes with this comprehensive installation guide.
+**Complete setup instructions for the Solana Arbitrage Scanner**
 
-## 📋 Prerequisites
+## 📋 System Requirements
 
-Before installing the scanner, ensure you have the following requirements:
-
-### **System Requirements**
-- **Node.js**: Version 18.0.0 or higher
-- **NPM**: Version 8.0.0 or higher (or Yarn)
+### **Minimum Requirements**
 - **Operating System**: Windows 10+, macOS 10.15+, or Linux
-- **Memory**: Minimum 4GB RAM (8GB recommended)
-- **Storage**: 1GB free space for installation and data
+- **Node.js**: Version 18.0 or higher
+- **RAM**: 2GB available memory
+- **Storage**: 1GB free disk space
+- **Internet**: Stable broadband connection
 
-### **Network Requirements**
-- **Internet Connection**: Stable broadband connection
-- **RPC Access**: Solana RPC endpoint (public or premium)
-- **Firewall**: Allow outbound HTTPS connections
+### **Recommended Setup**
+- **Operating System**: Linux Ubuntu 20.04+ or macOS 12+
+- **Node.js**: Version 20.0 (LTS)
+- **RAM**: 4GB+ available memory
+- **Storage**: 5GB+ free disk space (for data storage)
+- **Internet**: Premium RPC endpoint (Helius, QuickNode, or Alchemy)
 
-### **Optional (Recommended)**
-- **Premium RPC**: Helius, QuickNode, or Alchemy for better performance
-- **Git**: For cloning the repository
-- **TypeScript Knowledge**: For customization
+## 🚀 Installation Steps
 
----
+### **Step 1: Install Node.js**
 
-## 🚀 Step 1: Clone the Repository
-
-### **Option A: Using Git (Recommended)**
+**Windows:**
 ```bash
-# Clone the repository
-git clone https://github.com/your-username/solana-arb-scanner.git
-
-# Navigate to the project directory
-cd solana-arb-scanner
+# Download from https://nodejs.org
+# Choose "LTS" version
+# Run installer with default settings
 ```
 
-### **Option B: Download ZIP**
-1. Visit the [GitHub repository](https://github.com/your-username/solana-arb-scanner)
-2. Click the green "Code" button
-3. Select "Download ZIP"
-4. Extract the ZIP file to your desired location
-5. Open a terminal in the extracted folder
+**macOS:**
+```bash
+# Using Homebrew (recommended)
+brew install node
 
----
+# Or download from https://nodejs.org
+```
 
-## 📦 Step 2: Install Dependencies
+**Linux (Ubuntu/Debian):**
+```bash
+# Update package manager
+sudo apt update
 
-Install all required Node.js packages:
+# Install Node.js 20.x
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# Verify installation
+node --version
+npm --version
+```
+
+### **Step 2: Clone Repository**
 
 ```bash
-# Install dependencies using npm
+# Clone from GitHub
+git clone https://github.com/yccvvv/solana-arb-scanner.git
+
+# Navigate to project directory
+cd solana-arb-scanner
+
+# Verify contents
+ls -la
+```
+
+### **Step 3: Install Dependencies**
+
+```bash
+# Install all required packages (2-3 minutes)
 npm install
 
-# OR using yarn (if you prefer)
-yarn install
+# Verify installation
+npm list --depth=0
 ```
 
-### **What Gets Installed**
+### **Step 4: Environment Configuration**
 
-| Package | Purpose | Version |
-|---------|---------|---------|
-| `@solana/web3.js` | Solana blockchain interaction | ^1.98.2 |
-| `@jup-ag/api` | Jupiter aggregator API | ^6.0.42 |
-| `typescript` | TypeScript language support | ^5.8.3 |
-| `decimal.js` | Precise decimal calculations | ^10.5.0 |
-| `csv-writer` | CSV data export | ^1.6.0 |
-| `dotenv` | Environment variable management | ^16.5.0 |
-| `axios` | HTTP client for API calls | ^1.9.0 |
-
-### **Verify Installation**
 ```bash
-# Check Node.js version
-node --version
-# Should output: v18.0.0 or higher
-
-# Check npm version
-npm --version
-# Should output: 8.0.0 or higher
-
-# Verify TypeScript compilation
-npm run build
-# Should complete without errors
-```
-
----
-
-## ⚙️ Step 3: Environment Configuration
-
-### **Create Environment File**
-```bash
-# Copy the example environment file
+# Copy environment template
 cp env.example .env
 
-# Edit the environment file
+# Open for editing
 nano .env
-# OR use your preferred text editor
 ```
 
-### **Basic Configuration**
-Add the following to your `.env` file:
-
+**Basic Configuration:**
 ```env
-# Solana RPC endpoint
+# Solana RPC endpoint (start with free public endpoint)
 SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
 
 # Minimum profit threshold (0.05 = 0.05%)
 MIN_PROFIT_THRESHOLD=0.05
 
-# Update interval (8000ms = 8 seconds)
+# Update interval in milliseconds (8000 = 8 seconds)
 PRICE_UPDATE_INTERVAL=8000
+
+# Optional: Premium RPC for better performance
+# SOLANA_RPC_URL=https://YOUR_PREMIUM_RPC_URL
 ```
+
+### **Step 5: Verify Installation**
+
+```bash
+# Run quick test (should complete in ~2 minutes)
+npm run quick-csv
+
+# Check for success message
+# Look for CSV file in data/ directory
+ls data/
+```
+
+## 🔧 Advanced Configuration
 
 ### **Premium RPC Setup (Recommended)**
 
-For better performance and reliability, use a premium RPC provider:
+For production use, consider premium RPC providers:
 
-#### **Helius**
+#### **Helius (Recommended)**
 ```env
-SOLANA_RPC_URL=https://rpc.helius.xyz/?api-key=YOUR_API_KEY
+SOLANA_RPC_URL=https://mainnet.helius-rpc.com/?api-key=YOUR_API_KEY
 ```
+- **Benefits**: Faster response, higher rate limits
+- **Cost**: Free tier available, paid plans from $20/month
+- **Setup**: [Sign up at helius.xyz](https://helius.xyz)
 
 #### **QuickNode**
 ```env
-SOLANA_RPC_URL=https://your-endpoint.solana-mainnet.quiknode.pro/YOUR_API_KEY/
+SOLANA_RPC_URL=https://solana-mainnet.quiknode.pro/YOUR_ENDPOINT_ID/
 ```
+- **Benefits**: Enterprise-grade reliability
+- **Cost**: Free tier available, paid plans from $20/month
+- **Setup**: [Sign up at quicknode.com](https://quicknode.com)
 
 #### **Alchemy**
 ```env
 SOLANA_RPC_URL=https://solana-mainnet.g.alchemy.com/v2/YOUR_API_KEY
 ```
+- **Benefits**: Good free tier, detailed analytics
+- **Cost**: Free tier available, paid plans from $199/month
+- **Setup**: [Sign up at alchemy.com](https://alchemy.com)
 
----
+### **Performance Tuning**
 
-## ✅ Step 4: Verify Installation
+#### **For High-Frequency Scanning**
+```env
+MIN_PROFIT_THRESHOLD=0.01
+PRICE_UPDATE_INTERVAL=5000
+MAX_PARALLEL_REQUESTS=5
+REQUEST_TIMEOUT=10000
+```
 
-### **Quick Test**
-Run a quick test to verify everything is working:
+#### **For Conservative Scanning**
+```env
+MIN_PROFIT_THRESHOLD=0.10
+PRICE_UPDATE_INTERVAL=15000
+MAX_PARALLEL_REQUESTS=2
+REQUEST_TIMEOUT=30000
+```
 
+## 🛠️ Additional Tools
+
+### **CSV Analysis Tools**
+
+**Excel/Google Sheets:**
+- Open CSV files directly
+- Use pivot tables for analysis
+- Create charts and graphs
+
+**Python Analysis (Optional):**
 ```bash
-# Run the quick test scanner
-npm run quick-csv
+# Install pandas for advanced analysis
+pip install pandas matplotlib
+
+# Example analysis script available in docs/examples/
 ```
 
-**Expected Output:**
-```
-🚀 QUICK CSV ARBITRAGE TEST
-════════════════════════════════════════════════════════════════════════════════
-⚡ Quick test of 5 verified trading pairs
-📊 Generating small CSV for verification
+### **Monitoring Setup**
 
-🔄 QUICK SCAN #1
-════════════════════════════════════════════════════════════════════════════════
-🔍 [1/5] SOL/USDC
-   💰 Best: 0.0234% (Raydium → Orca-Whirlpool)
-...
-✅ Quick test completed successfully!
-📁 Data saved to: data/quick_arbitrage_test_[timestamp].csv
-```
-
-### **Build Test**
-Verify TypeScript compilation:
-
+**Process Manager (Optional):**
 ```bash
-# Compile TypeScript to JavaScript
-npm run build
+# Install PM2 for production deployment
+npm install -g pm2
 
-# Check that dist/ directory was created
-ls dist/
-# Should show compiled JavaScript files
+# Start scanner with PM2
+pm2 start "npm run real-dex-scan" --name "solana-arbitrage"
+
+# Monitor status
+pm2 status
+pm2 logs solana-arbitrage
 ```
-
-### **Scanner Modes Test**
-Test different scanner modes:
-
-```bash
-# Test price display
-npm run price-test
-
-# Test real DEX scanner (interrupt with Ctrl+C after a few minutes)
-npm run real-dex-scan
-```
-
----
-
-## 🛠️ Step 5: Optional Configuration
-
-### **Custom Token Configuration**
-Edit token lists in `src/utils/tokenUtils.ts`:
-
-```typescript
-// Add new tokens to monitor
-export const TOKEN_LIST = {
-  // Existing tokens...
-  'YOUR_TOKEN': {
-    mint: new PublicKey('YOUR_TOKEN_MINT_ADDRESS'),
-    decimals: 6,
-    symbol: 'YOUR_TOKEN'
-  }
-};
-```
-
-### **Scanner Parameters**
-Modify scanner settings in each scanner file:
-
-```typescript
-// Adjust trading pairs
-const tradingPairs = [
-  { from: 'SOL', to: 'USDC', amount: new Decimal(1) },
-  // Add your preferred pairs
-];
-
-// Adjust stopping conditions
-if (this.totalRecords >= 500) {  // Change target
-  break;
-}
-```
-
----
 
 ## 🐛 Troubleshooting
 
-### **Common Issues**
+### **Common Installation Issues**
 
-#### **Node.js Version Error**
-```
-Error: The engine "node" is incompatible with this module
-```
-**Solution**: Upgrade to Node.js 18+
-```bash
-# Using nvm (recommended)
-nvm install 18
-nvm use 18
-
-# Or download from https://nodejs.org
-```
-
-#### **Permission Errors**
-```
-Error: EACCES: permission denied
-```
-**Solution**: Fix npm permissions or use yarn
-```bash
-# Fix npm permissions
-sudo chown -R $(whoami) ~/.npm
-
-# OR use yarn instead
-npm install -g yarn
-yarn install
-```
-
-#### **RPC Connection Errors**
-```
-Error: 429 Too Many Requests
-Error: Connection refused
-```
-**Solution**: 
-1. Use a premium RPC endpoint
-2. Check your internet connection
-3. Verify the RPC URL is correct
-
-#### **CSV Permission Errors**
-```
-Error: EACCES: permission denied, open 'data/...'
-```
-**Solution**: Ensure write permissions
-```bash
-# Create data directory with proper permissions
-mkdir -p data
-chmod 755 data
-```
-
-#### **TypeScript Compilation Errors**
-```
-Error: Cannot find module '@types/...'
-```
-**Solution**: Reinstall dependencies
-```bash
-# Clear cache and reinstall
-rm -rf node_modules package-lock.json
-npm install
-```
+| **Issue** | **Cause** | **Solution** |
+|-----------|-----------|--------------|
+| `npm install` fails | Node.js version too old | Update to Node.js 18+ |
+| Permission denied | User permissions | Run `sudo chown -R $(whoami) ~/.npm` |
+| Module not found | Dependencies missing | Delete `node_modules`, run `npm install` again |
+| RPC connection fails | Invalid endpoint | Check `.env` file, verify RPC URL |
 
 ### **Performance Issues**
 
-#### **Slow Scanning**
-- **Use premium RPC**: Public RPCs are often rate-limited
-- **Reduce pairs**: Monitor fewer trading pairs initially
-- **Increase intervals**: Set longer delays between requests
+| **Issue** | **Cause** | **Solution** |
+|-----------|-----------|--------------|
+| Slow scanning | Public RPC limits | Upgrade to premium RPC endpoint |
+| Memory usage high | Large datasets | Reduce scan interval, limit trading pairs |
+| 429 errors | Rate limiting | Increase `PRICE_UPDATE_INTERVAL` |
+| Network timeouts | Connection issues | Check internet connection, try different RPC |
 
-#### **High Memory Usage**
-- **Regular restarts**: Restart scanner periodically
-- **Reduce batch size**: Process fewer pairs per scan
-- **Monitor CSV size**: Large CSV files can consume memory
+### **Data Issues**
 
----
+| **Issue** | **Cause** | **Solution** |
+|-----------|-----------|--------------|
+| No CSV files generated | Scanner crashed | Check console for errors |
+| Empty arbitrage opportunities | Market efficiency | Normal - opportunities are rare |
+| Duplicate data | Multiple instances | Ensure only one scanner running |
+| Invalid prices | Stale data | Restart scanner, check RPC health |
 
-## 📊 Verify Data Output
+## 📞 Support
 
-After successful installation, you should see:
+### **Self-Help Resources**
+- **📚 Documentation**: [Complete Guide](../README.md)
+- **💰 Examples**: [Real Arbitrage Data](../data-analysis/real-examples.md)
+- **🎮 Usage**: [Scanner Modes](../core-features/scanner-modes.md)
 
-### **Directory Structure**
-```
-solana-arb-scanner/
-├── data/                     # Generated CSV files
-├── dist/                     # Compiled TypeScript
-├── node_modules/             # Dependencies
-├── src/                      # Source code
-├── docs/                     # Documentation
-├── .env                      # Your configuration
-└── package.json              # Project metadata
-```
+### **Direct Support**
+- **🐛 Issues**: [GitHub Issues](https://github.com/yccvvv/solana-arb-scanner/issues)
+- **📧 Email**: Available for implementation assistance
+- **💬 Community**: Developer support available
 
-### **Sample CSV Output**
-Check the `data/` directory for CSV files with names like:
-- `quick_arbitrage_test_2025-06-03T02-12-42-689Z.csv`
-- `real_dex_arbitrage_2025-06-03T02-49-16-508Z.csv`
+## ✅ Installation Checklist
 
-### **CSV Content Verification**
-Open any generated CSV file and verify it contains:
-- Timestamp columns
-- Trading pair data
-- DEX information
-- Price and arbitrage calculations
+- [ ] **Node.js 18+** installed and verified
+- [ ] **Repository cloned** successfully
+- [ ] **Dependencies installed** without errors
+- [ ] **Environment configured** with valid RPC endpoint
+- [ ] **Quick test passed** - CSV file generated
+- [ ] **Premium RPC setup** (recommended for production)
+- [ ] **Monitoring tools** installed (optional)
 
 ---
 
-## 🎉 Installation Complete!
+**🎯 Once installation is complete, you're ready to start finding arbitrage opportunities in the Solana ecosystem!** 
 
-You now have a fully functional Solana Arbitrage Scanner. Here's what you can do next:
-
-### **Immediate Next Steps**
-1. **Run Quick Test**: `npm run quick-csv` to verify functionality
-2. **Try Real Scanner**: `npm run real-dex-scan` for live data
-3. **Explore Data**: Open generated CSV files in Excel or Google Sheets
-4. **Read Documentation**: Explore other sections of this guide
-
-### **Recommended Next Steps**
-1. **Set up Premium RPC**: For better performance and reliability
-2. **Customize Pairs**: Add tokens you're interested in monitoring
-3. **Schedule Runs**: Set up automated scanning
-4. **Analyze Data**: Use the CSV data for your research or trading
-
----
-
-**🎯 Success!** Your Solana Arbitrage Scanner is ready to detect cross-DEX arbitrage opportunities across the Solana ecosystem. 
+**Next Steps**: [Run your first scan](quick-start.md) or explore [scanner modes](../core-features/scanner-modes.md). 

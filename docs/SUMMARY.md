@@ -1,58 +1,55 @@
-# Table of Contents
+# 📚 Solana Arbitrage Scanner Documentation
 
-## Overview
-* [📖 Introduction](README.md)
+**Professional arbitrage detection system for the Solana ecosystem**
 
-## Getting Started
-* [🔧 Installation Guide](getting-started/installation.md)
+## 🚀 Getting Started
+
+* [📖 Overview](README.md)
 * [⚡ Quick Start](getting-started/quick-start.md)
-* [🎮 Scanner Modes Overview](getting-started/scanner-modes.md)
+* [🔧 Installation Guide](getting-started/installation.md)
 
-## Core Features
+## 💰 Business Value
+
+* [💎 Real Arbitrage Opportunities](data-analysis/real-examples.md)
+* [📊 Performance Metrics](data-analysis/performance.md)
+* [🎯 ROI Calculator](data-analysis/roi-calculator.md)
+
+## 🔥 Core Features
+
+* [🎮 Scanner Modes](core-features/scanner-modes.md)
 * [🔥 Supported DEX Protocols](core-features/supported-dexes.md)
-* [📊 Data Export & CSV Structure](core-features/data-export.md)
-* [🎯 Phoenix AMM/CLMM Integration](core-features/phoenix-integration.md)
-* [⚙️ Rate Limiting & Performance](core-features/rate-limiting.md)
+* [📊 Data Export & Analysis](core-features/data-export.md)
+* [⚡ Real-time Monitoring](core-features/monitoring.md)
 
-## Scanner Modes (Detailed)
-* [🚀 Real DEX Scanner](scanner-modes/real-dex-scanner.md)
-* [🔥 Phoenix-Focused Scanner](scanner-modes/phoenix-scanner.md)
-* [📈 Conservative Scanner](scanner-modes/conservative-scanner.md)
-* [⚡ Quick Test Scanner](scanner-modes/quick-test.md)
-* [📺 Price Display Mode](scanner-modes/price-display.md)
+## 🛠️ Technical Documentation
 
-## Data Analysis
-* [💰 Real Arbitrage Examples](data-analysis/real-examples.md)
-* [📋 Sample CSV Data](data-analysis/sample-data.md)
-* [📊 Data Structure Explained](data-analysis/data-structure.md)
-* [📈 Performance Analysis](data-analysis/performance-metrics.md)
-
-## Configuration
-* [🔧 Environment Setup](configuration/environment.md)
-* [🎯 Token Selection](configuration/tokens.md)
-* [⚙️ Advanced Settings](configuration/advanced.md)
-* [🛡️ Security & RPC](configuration/security.md)
-
-## Technical Reference
-* [🛠️ API Reference](technical/api-reference.md)
+* [⚙️ Configuration Options](configuration/environment.md)
+* [🔌 API Integration](technical/api-integration.md)
 * [🏗️ Architecture Overview](technical/architecture.md)
-* [📡 Jupiter Integration](technical/jupiter-integration.md)
-* [🔍 DEX Detection Logic](technical/dex-detection.md)
+* [🔍 Advanced Customization](technical/customization.md)
 
-## Examples & Use Cases
-* [📊 Trading Strategy Development](examples/trading-strategies.md)
-* [🔬 Market Research](examples/market-research.md)
-* [🏢 Institutional Use](examples/institutional.md)
-* [🎓 Educational Analysis](examples/educational.md)
+## 📈 Data Analysis
 
-## Troubleshooting
-* [❓ Common Issues](troubleshooting/common-issues.md)
-* [🐛 Error Handling](troubleshooting/error-handling.md)
-* [⚡ Performance Optimization](troubleshooting/optimization.md)
-* [🔧 Debug Mode](troubleshooting/debugging.md)
+* [📋 CSV Structure](data-analysis/csv-structure.md)
+* [📊 Analytics Examples](data-analysis/analytics.md)
+* [🎯 Trading Strategies](data-analysis/strategies.md)
 
-## Appendices
-* [📚 Glossary](appendices/glossary.md)
-* [🔗 External Resources](appendices/resources.md)
-* [📄 License](appendices/license.md)
-* [🤝 Contributing](appendices/contributing.md) 
+## 🆘 Support & Troubleshooting
+
+* [🐛 Common Issues](support/troubleshooting.md)
+* [❓ FAQ](support/faq.md)
+* [📞 Getting Help](support/contact.md)
+
+## 📄 Legal & Compliance
+
+* [📜 License](legal/license.md)
+* [⚠️ Risk Disclaimer](legal/disclaimer.md)
+* [🔒 Security Considerations](legal/security.md)
+
+---
+
+**💡 New to arbitrage trading?** Start with [Quick Start](getting-started/quick-start.md) for a 5-minute setup.
+
+**🔍 Looking for proven results?** Check out [Real Examples](data-analysis/real-examples.md) with actual profit data.
+
+**🚀 Ready for production?** Review [Scanner Modes](core-features/scanner-modes.md) and [Installation Guide](getting-started/installation.md). 
