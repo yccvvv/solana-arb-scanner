@@ -1,0 +1,16 @@
+root: ./
+
+structure:
+  readme: README.md
+  summary: SUMMARY.md
+
+title: Solana Arbitrage Scanner Documentation
+description: Professional-grade arbitrage detection system for Solana ecosystem
+
+github:
+  repo: yccvvv/solana-arb-scanner
+  branch: main
+
+redirects:
+  previous: /README.md
+  next: /getting-started/installation.md 
