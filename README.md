@@ -254,27 +254,4 @@ npm run price-test
 npm run real-dex-scan
 ```
 
-## 📄 License
-
-This project is licensed under the ISC License - see the [LICENSE](LICENSE) file for details.
-
-## 🤝 Support
-
-For questions, issues, or feature requests:
-
-- **GitHub Issues**: [Create an issue](https://github.com/your-username/solana-arb-scanner/issues)
-- **Documentation**: [GitBook Documentation](https://your-gitbook-url.com)
-- **Email**: your-email@example.com
-
-## 🌟 Features Roadmap
-
-- [ ] WebSocket real-time streaming
-- [ ] Telegram/Discord notifications
-- [ ] Web dashboard interface
-- [ ] Advanced filtering options
-- [ ] Profitability backtesting
-- [ ] Multi-chain support (Ethereum, BSC)
-
----
-
 **⚡ Built for the Solana ecosystem | 🚀 Optimized for professional trading** 
