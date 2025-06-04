@@ -227,3 +227,129 @@ The legitimate scanner has been tested and validates the expected reality:
 - Micro-movements in liquidity pools  
 - Slippage parameter variations
 - Not profitable arbitrage after gas costs
+
+## 🚀 **Real-Time Arbitrage Scanner (Advanced)**
+
+### **Missing Data Sources Addressed**
+
+The real-time scanner demonstrates what's **actually required** for legitimate arbitrage detection:
+
+```bash
+npm run realtime-scan
+```
+
+### **📡 Real-Time Data Sources**
+
+#### **1. WebSocket Price Feeds**
+```typescript
+// ✅ What's needed (not HTTP polling)
+const raydiumWS = new WebSocket('wss://api.raydium.io/v2/ws');
+const orcaWS = new WebSocket('wss://api.orca.so/v1/ws');
+
+// Real-time price updates every few milliseconds
+raydiumWS.on('message', (priceUpdate) => {
+  handleInstantPriceChange(priceUpdate);
+});
+```
+
+#### **2. On-Chain Pool Monitoring**
+```typescript
+// Direct pool account subscriptions
+connection.onAccountChange(poolPublicKey, (accountInfo) => {
+  const poolState = parsePoolData(accountInfo.data);
+  updateLiquidityDepth(poolState);
+});
+```
+
+#### **3. Oracle Price References**
+```typescript
+// Pyth Network integration
+import { PythConnection } from '@pythnetwork/client';
+const pythPrices = await pythConnection.getLatestPriceFeeds(['SOL/USD', 'RAY/USD']);
+
+// Switchboard integration
+import { AggregatorAccount } from '@switchboard-xyz/solana.js';
+const switchboardPrice = await aggregatorAccount.getLatestValue();
+```
+
+#### **4. Liquidity Depth Analysis**
+```typescript
+// Real order book monitoring
+interface LiquidityDepth {
+  bids: Array<{ price: Decimal; quantity: Decimal }>;
+  asks: Array<{ price: Decimal; quantity: Decimal }>;
+  totalLiquidity: Decimal;
+  impactAnalysis: PriceImpact[];
+}
+```
+
+### **⚡ Real-Time Requirements**
+
+| **Component** | **Current Limitation** | **Required for Production** |
+|---------------|----------------------|---------------------------|
+| **Data Frequency** | HTTP polling (seconds) | WebSocket streams (milliseconds) |
+| **Price Sources** | Jupiter aggregated only | Direct DEX pool monitoring |
+| **Oracle Integration** | None | Pyth, Switchboard real-time feeds |
+| **Liquidity Analysis** | Top-of-book only | Full order book depth |
+| **Execution Timing** | Manual analysis | Sub-second automated execution |
+| **MEV Protection** | None | Front-running detection/prevention |
+
+### **🛠️ Implementation Challenges**
+
+#### **WebSocket Authentication**
+Most DEX APIs require authentication for real-time feeds:
+```typescript
+// Example: Authenticated WebSocket connection
+const ws = new WebSocket('wss://api.dex.com/v1/ws', {
+  headers: {
+    'Authorization': `Bearer ${apiKey}`,
+    'X-API-Key': process.env.DEX_API_KEY
+  }
+});
+```
+
+#### **Oracle Integration Complexity**
+```typescript
+// Pyth price feed setup
+const pythConnection = new PythConnection(connection, 'mainnet-beta');
+const priceIds = [
+  '0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d', // SOL/USD
+  '0x83e872c18e1cf9c10dce7ac83b7e4e4c220c48547c1e81e4fb4e7c5b05ebd0d5'  // RAY/USD
+];
+await pythConnection.subscribePriceFeeds(priceIds, handlePriceUpdate);
+```
+
+#### **Direct Pool Monitoring**
+```typescript
+// Raydium AMM pool monitoring
+const poolKeys = await getPoolKeys('SOL', 'USDC');
+const poolInfo = await connection.getAccountInfo(poolKeys.amm.id);
+
+// Subscribe to pool state changes
+connection.onAccountChange(poolKeys.amm.id, (accountInfo) => {
+  const poolState = LIQUIDITY_STATE_LAYOUT_V4.decode(accountInfo.data);
+  // Process real-time liquidity changes
+});
+```
+
+### **💡 Educational Value**
+
+The real-time scanner demonstrates:
+
+1. **Proper Architecture**: What real arbitrage detection requires
+2. **Data Source Diversity**: Multiple independent price feeds
+3. **Technical Complexity**: WebSocket, Oracle, and Pool integrations
+4. **Production Requirements**: Authentication, rate limiting, error handling
+5. **Market Reality**: Why opportunities are rare/non-existent
+
+### **🚫 Current Limitations**
+
+```
+⚠️  IMPLEMENTATION STATUS:
+   🔄 WebSocket integration: Demonstration mode
+   🔄 Oracle feeds: Simulated (requires API keys)  
+   🔄 Pool monitoring: Limited to available APIs
+   💰 Real trading: Requires significant additional development
+```
+
+**Bottom Line**: Real arbitrage detection requires enterprise-level infrastructure, not simple HTTP polling.

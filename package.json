@@ -16,6 +16,7 @@
     "phoenix-scan": "ts-node src/phoenixFocusedScanner.ts",
     "professional-scan": "ts-node src/professionalArbitrageScanner.ts",
     "legitimate-scan": "ts-node src/legitimateArbitrageScanner.ts",
+    "realtime-scan": "ts-node src/realTimeArbitrageScanner.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -36,9 +37,12 @@
     "@coral-xyz/anchor": "^0.31.1",
     "@jup-ag/api": "^6.0.42",
     "@project-serum/anchor": "^0.26.0",
+    "@pythnetwork/client": "^2.22.1",
     "@raydium-io/raydium-sdk-v2": "^0.1.139-alpha",
     "@solana/spl-token": "^0.4.13",
     "@solana/web3.js": "^1.98.2",
+    "@switchboard-xyz/solana.js": "^3.2.5",
+    "@types/ws": "^8.18.1",
     "axios": "^1.9.0",
     "bn.js": "^5.2.2",
     "csv-writer": "^1.6.0",
