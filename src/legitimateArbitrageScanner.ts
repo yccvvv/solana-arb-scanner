@@ -118,6 +118,16 @@ class LegitimateArbitrageScanner {
     console.log('🎯 Purpose: Real arbitrage detection using direct DEX integrations');
     console.log('🔧 Method: Jupiter Aggregator vs Direct DEX Price Comparison');
     console.log('📊 Data: 100% authentic, no synthetic routing interpretation');
+    console.log('');
+    console.log('⚠️  IMPORTANT LIMITATIONS:');
+    console.log('   • Jupiter already optimizes routes across DEXes');
+    console.log('   • Real arbitrage opportunities are rare in efficient markets');
+    console.log('   • Price differences often reflect timing/API response delays');
+    console.log('   • Direct DEX APIs may require authentication/wallets');
+    console.log('   • Most "opportunities" disappear faster than execution time');
+    console.log('');
+    console.log('💡 Educational Value: Demonstrates proper arbitrage detection methodology');
+    console.log('🚫 Production Warning: Requires significant additional development for real trading');
     console.log('='.repeat(80));
 
     const tradingPairs = [
@@ -264,15 +274,39 @@ class LegitimateArbitrageScanner {
   private async getDirectDexPrices(fromSymbol: string, toSymbol: string, amount: Decimal): Promise<DirectDexPrice[]> {
     const prices: DirectDexPrice[] = [];
 
-    // For now, we'll use Raydium's direct API as a reference
-    // In a full implementation, you'd add Orca, Meteora, etc.
+    // Attempt multiple direct DEX integrations
+    console.log(`    🔍 Attempting direct DEX price discovery...`);
+    
+    // 1. Try Raydium direct API
     try {
       const raydiumPrice = await this.getRaydiumDirectPrice(fromSymbol, toSymbol, amount);
       if (raydiumPrice) {
         prices.push(raydiumPrice);
+        console.log(`    ✅ Raydium direct: ${raydiumPrice.price.toFixed(6)}`);
+      } else {
+        console.log(`    ❌ Raydium: No direct route found`);
       }
     } catch (error) {
-      console.log(`    ⚠️  Raydium direct price failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.log(`    ❌ Raydium: ${error instanceof Error ? error.message.slice(0, 60) : 'Unknown error'}`);
+    }
+
+    // 2. Future: Add Orca Whirlpool SDK integration
+    // try {
+    //   const orcaPrice = await this.getOrcaDirectPrice(fromSymbol, toSymbol, amount);
+    //   if (orcaPrice) prices.push(orcaPrice);
+    // } catch (error) { /* Handle Orca errors */ }
+
+    // 3. Future: Add Meteora DLMM integration
+    // try {
+    //   const meteoraPrice = await this.getMeteoraDirectPrice(fromSymbol, toSymbol, amount);
+    //   if (meteoraPrice) prices.push(meteoraPrice);
+    // } catch (error) { /* Handle Meteora errors */ }
+
+    console.log(`    📊 Direct DEX responses: ${prices.length}`);
+    
+    if (prices.length === 0) {
+      console.log(`    ⚠️  No direct DEX prices available - this is common and expected`);
+      console.log(`    💡 Real implementation would require DEX-specific SDKs and authentication`);
     }
 
     return prices;
@@ -285,14 +319,23 @@ class LegitimateArbitrageScanner {
     if (!fromToken || !toToken) return null;
 
     try {
-      // Use Raydium's API directly (this would be replaced with SDK calls in production)
-      const response = await axios.get(`https://api-v3.raydium.io/compute/swap-base-in`, {
+      // ⚠️  IMPORTANT LIMITATION NOTE:
+      // This method attempts to get "direct" Raydium prices, but faces challenges:
+      // 1. Raydium API endpoint has changed (transaction-v1.raydium.io)
+      // 2. API requires additional parameters (txVersion, wallet, etc.)
+      // 3. Real arbitrage opportunities are rare due to Jupiter's optimization
+      // 4. Price differences often reflect timing/slippage rather than arbitrage
+      
+      // Use Raydium's current API endpoint
+      const response = await axios.get(`https://transaction-v1.raydium.io/compute/swap-base-in`, {
         params: {
           inputMint: fromToken.mint.toString(),
           outputMint: toToken.mint.toString(),
           amount: amount.mul(Math.pow(10, fromToken.decimals)).floor().toString(),
-          slippageBps: 50
-        }
+          slippageBps: 50,
+          txVersion: 'V0'  // Required parameter
+        },
+        timeout: 10000
       });
 
       if (response.data && response.data.data) {
@@ -312,7 +355,11 @@ class LegitimateArbitrageScanner {
         };
       }
     } catch (error) {
-      // Silent fail - this is expected for many pairs
+      // Expected to fail for many pairs - Raydium doesn't have all trading pairs
+      // Also may fail due to API authentication or parameter requirements
+      if (error instanceof Error && !error.message.includes('timeout')) {
+        console.log(`    ℹ️  Raydium API: ${error.message.slice(0, 100)}`);
+      }
     }
 
     return null;
