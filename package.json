@@ -14,6 +14,7 @@
     "conservative-scan": "ts-node src/conservativeArbitrageScanner.ts",
     "real-dex-scan": "ts-node src/realDexArbitrageScanner.ts",
     "phoenix-scan": "ts-node src/phoenixFocusedScanner.ts",
+    "professional-scan": "ts-node src/professionalArbitrageScanner.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
