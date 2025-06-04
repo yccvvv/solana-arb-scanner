@@ -117,13 +117,27 @@ class ProfessionalArbitrageScanner {
     console.log('System initialized. CSV output configured:', this.csvFilePath);
   }
 
-  async startProfessionalScanning() {
-    console.log('\n=== PROFESSIONAL ARBITRAGE SCANNER ===');
-    console.log('Version: 1.0.0');
-    console.log('Mode: Production-grade multi-DEX arbitrage detection');
-    console.log('Rate Limit: Compliant with Jupiter API (30 req/min)');
-    console.log('Processing: Parallel token analysis with real-time optimization');
+  async startProfessionalArbitrageScanning() {
+    console.log('\n🚫 === DEPRECATED SCANNER WARNING ===');
+    console.log('❌ This scanner contains FUNDAMENTAL ARCHITECTURAL FLAWS');
+    console.log('❌ It incorrectly interprets Jupiter routing as independent DEX prices');
+    console.log('❌ This does NOT represent real arbitrage opportunities');
+    console.log('');
+    console.log('✅ For legitimate arbitrage detection, use:');
+    console.log('✅ npm run legitimate-scan');
+    console.log('');
+    console.log('🔧 Technical Issue:');
+    console.log('   Jupiter provides AGGREGATED routes, not individual market prices');
+    console.log('   RouteInfo data represents routing steps, not competitive prices');
+    console.log('');
+    console.log('💡 Real arbitrage requires direct DEX integration comparison');
     console.log('='.repeat(70));
+    console.log('');
+    console.log('⚠️  Continuing for demonstration purposes only...');
+    console.log('⚠️  Data generated contains false arbitrage signals');
+    console.log('');
+
+    console.log('🚀 === PROFESSIONAL ARBITRAGE SCANNER (DEPRECATED) ===');
 
     this.isRunning = true;
     this.startTime = Date.now();
@@ -242,7 +256,7 @@ class ProfessionalArbitrageScanner {
               console.log(`    Opportunity detected: ${best.profitPercentage.toFixed(4)}% gross profit (${best.buyDex} -> ${best.sellDex})`);
               console.log(`    Net profit after gas: ${best.netProfitAfterGas.toFixed(6)} ${pair.to}`);
               
-              if (!bestArbitrage || best.netProfitAfterGas.gt(bestArbitrage.netProfitAfterGas)) {
+              if (bestArbitrage === null || best.netProfitAfterGas.gt(bestArbitrage.netProfitAfterGas)) {
                 bestArbitrage = best;
               }
             } else {
@@ -285,12 +299,12 @@ class ProfessionalArbitrageScanner {
     }
 
     // Log best opportunity
-    if (bestArbitrage) {
+    if (bestArbitrage !== null) {
       console.log('\nBEST ARBITRAGE OPPORTUNITY:');
-      console.log(`  Pair: ${bestArbitrage.pair}`);
-      console.log(`  Strategy: Buy on ${bestArbitrage.buyDex}, sell on ${bestArbitrage.sellDex}`);
-      console.log(`  Gross profit: ${bestArbitrage.profitPercentage.toFixed(4)}%`);
-      console.log(`  Net profit: ${bestArbitrage.netProfitAfterGas.toFixed(6)} tokens`);
+      console.log(`  Pair: ${(bestArbitrage as ArbitrageOpportunity).pair}`);
+      console.log(`  Strategy: Buy on ${(bestArbitrage as ArbitrageOpportunity).buyDex}, sell on ${(bestArbitrage as ArbitrageOpportunity).sellDex}`);
+      console.log(`  Gross profit: ${(bestArbitrage as ArbitrageOpportunity).profitPercentage.toFixed(4)}%`);
+      console.log(`  Net profit: ${(bestArbitrage as ArbitrageOpportunity).netProfitAfterGas.toFixed(6)} tokens`);
     }
 
     return {
@@ -350,9 +364,9 @@ class ProfessionalArbitrageScanner {
         const quote = await this.jupiterClient.getQuote(
           fromToken.mint.toString(),
           toToken.mint.toString(),
-          amount.mul(new Decimal(Math.pow(10, fromToken.decimals))).floor().toString(),
-          params.slippage,
-          params.onlyDirect
+          amount,
+          fromToken.decimals,
+          params.slippage
         );
 
         if (quote && quote.routePlan && quote.routePlan.length > 0) {
@@ -559,7 +573,7 @@ if (require.main === module) {
     process.exit(0);
   });
 
-  scanner.startProfessionalScanning().catch(error => {
+  scanner.startProfessionalArbitrageScanning().catch(error => {
     console.error('Scanner error:', error instanceof Error ? error.message : 'Unknown error');
     process.exit(1);
   });

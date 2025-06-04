@@ -15,6 +15,7 @@
     "real-dex-scan": "ts-node src/realDexArbitrageScanner.ts",
     "phoenix-scan": "ts-node src/phoenixFocusedScanner.ts",
     "professional-scan": "ts-node src/professionalArbitrageScanner.ts",
+    "legitimate-scan": "ts-node src/legitimateArbitrageScanner.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -35,6 +36,7 @@
     "@coral-xyz/anchor": "^0.31.1",
     "@jup-ag/api": "^6.0.42",
     "@project-serum/anchor": "^0.26.0",
+    "@raydium-io/raydium-sdk-v2": "^0.1.139-alpha",
     "@solana/spl-token": "^0.4.13",
     "@solana/web3.js": "^1.98.2",
     "axios": "^1.9.0",

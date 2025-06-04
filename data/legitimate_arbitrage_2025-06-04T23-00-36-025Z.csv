@@ -1,0 +1,7 @@
+Timestamp,Scan Number,Trading Pair,DEX Name,Data Source,Exchange Rate,Input Amount,Output Amount,Price Impact (%),Liquidity Available,Arbitrage Available,Arbitrage Strategy,Profit (%),Profit Amount,Gas Cost (SOL),Net Profit,Confidence Level,Scan Duration (ms),Request ID
+2025-06-04T23:00:36.026Z,1,SOL/USDC,Jupiter Aggregator,aggregator,153.56504,1,153.56504,0,true,false,,0,0,0.005,0,,367,req_0000
+2025-06-04T23:00:36.026Z,1,SOL/USDT,Jupiter Aggregator,aggregator,153.455517,1,153.455517,0.00000662847211202682,true,false,,0,0,0.005,0,,3572,req_0001
+2025-06-04T23:00:36.026Z,1,RAY/SOL,Jupiter Aggregator,aggregator,0.01429900528,100,1.429900528,0.001051848083853728,true,false,,0,0,0.005,0,,6999,req_0002
+2025-06-04T23:00:36.026Z,1,RAY/USDC,Jupiter Aggregator,aggregator,2.19479745,100,219.479745,0.00134916291091,true,false,,0,0,0.005,0,,10228,req_0003
+2025-06-04T23:00:36.026Z,1,ORCA/SOL,Jupiter Aggregator,aggregator,0.01663201286,100,1.663201286,0.0026737802557419282,true,false,,0,0,0.005,0,,13457,req_0004
+2025-06-04T23:00:36.026Z,1,JUP/SOL,Jupiter Aggregator,aggregator,0.00338371754,100,0.338371754,0.0005403891863753612,true,false,,0,0,0.005,0,,16681,req_0005

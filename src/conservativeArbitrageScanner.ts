@@ -99,11 +99,27 @@ class ConservativeArbitrageScanner {
   }
 
   async startConservativeScanning() {
-    console.log('\n🚀 CONSERVATIVE ARBITRAGE SCANNER - RATE LIMIT FRIENDLY');
-    console.log('═'.repeat(80));
-    console.log('⏰ Respects 60 requests/minute limit (1 request per second)');
-    console.log('🔄 Continuous scanning to build large dataset over time');
-    console.log('📊 Target: 500+ unique arbitrage data points\n');
+    console.log('\n🚫 === DEPRECATED SCANNER WARNING ===');
+    console.log('❌ This scanner contains FUNDAMENTAL ARCHITECTURAL FLAWS');
+    console.log('❌ It incorrectly compares prices from the SAME Jupiter route');
+    console.log('❌ This does NOT represent real arbitrage opportunities');
+    console.log('');
+    console.log('✅ For legitimate arbitrage detection, use:');
+    console.log('✅ npm run legitimate-scan');
+    console.log('');
+    console.log('🔧 Technical Issue:');
+    console.log('   Jupiter provides AGGREGATED routes, not independent DEX prices');
+    console.log('   Comparing route steps creates false arbitrage signals');
+    console.log('');
+    console.log('💡 Real arbitrage requires:');
+    console.log('   - Jupiter price vs Direct DEX API price');
+    console.log('   - Direct DEX vs Direct DEX comparison');
+    console.log('   - Different aggregator comparison');
+    console.log('='.repeat(70));
+    console.log('');
+    console.log('⚠️  Continuing for demonstration purposes only...');
+    console.log('⚠️  Data generated is NOT reliable for trading decisions');
+    console.log('');
 
     this.isRunning = true;
     this.startTime = Date.now();
@@ -343,46 +359,28 @@ class ConservativeArbitrageScanner {
   }
 
   private findArbitrageOpportunities(dexPrices: DexPrice[], pair: string): ArbitrageOpportunity[] {
-    const opportunities: ArbitrageOpportunity[] = [];
+    // ❌ CRITICAL FLAW IDENTIFIED ❌
+    // This function was comparing prices from the SAME Jupiter aggregated route
+    // and treating them as independent DEX prices - this is fundamentally incorrect!
+    // 
+    // Jupiter provides an AGGREGATED route that may use multiple DEXes in sequence
+    // to achieve the best price. Comparing steps within the same route does NOT
+    // constitute real arbitrage opportunities.
+    //
+    // Real arbitrage requires comparing:
+    // 1. Jupiter aggregated price vs Direct DEX execution price
+    // 2. Direct DEX price vs Direct DEX price (different protocols)
+    // 3. Different aggregator prices vs each other
+    //
+    // 🚫 DO NOT USE THIS SCANNER FOR REAL ARBITRAGE DETECTION
+    // ✅ USE: npm run legitimate-scan (legitimateArbitrageScanner.ts)
 
-    for (let i = 0; i < dexPrices.length; i++) {
-      for (let j = i + 1; j < dexPrices.length; j++) {
-        const dex1 = dexPrices[i];
-        const dex2 = dexPrices[j];
+    console.log(`⚠️  WARNING: This scanner contains FUNDAMENTAL FLAWS`);
+    console.log(`🚫 False arbitrage detection - comparing prices from same Jupiter route`);
+    console.log(`✅ Use 'npm run legitimate-scan' for real arbitrage detection`);
 
-        if (dex1.price.gt(dex2.price)) {
-          const profit = dex1.price.sub(dex2.price);
-          const profitPercentage = profit.div(dex2.price).mul(100);
-
-          opportunities.push({
-            pair,
-            buyDex: dex2.dex,
-            sellDex: dex1.dex,
-            buyPrice: dex2.price,
-            sellPrice: dex1.price,
-            profit,
-            profitPercentage,
-            timestamp: new Date().toISOString()
-          });
-        } else if (dex2.price.gt(dex1.price)) {
-          const profit = dex2.price.sub(dex1.price);
-          const profitPercentage = profit.div(dex1.price).mul(100);
-
-          opportunities.push({
-            pair,
-            buyDex: dex1.dex,
-            sellDex: dex2.dex,
-            buyPrice: dex1.price,
-            sellPrice: dex2.price,
-            profit,
-            profitPercentage,
-            timestamp: new Date().toISOString()
-          });
-        }
-      }
-    }
-
-    return opportunities.sort((a, b) => b.profitPercentage.sub(a.profitPercentage).toNumber());
+    // Return empty array to prevent false arbitrage detection
+    return [];
   }
 
   private convertToCsvRecords(
