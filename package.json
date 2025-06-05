@@ -4,7 +4,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/index.js",
+    "start": "npm run build && node dist/index.js",
     "dev": "ts-node src/index.ts",
     "price-test": "ts-node src/priceTest.ts",
     "cross-dex-scan": "ts-node src/crossDexArbitrage.ts",
@@ -15,9 +15,25 @@
     "real-dex-scan": "ts-node src/realDexArbitrageScanner.ts",
     "phoenix-scan": "ts-node src/phoenixFocusedScanner.ts",
     "professional-scan": "ts-node src/professionalArbitrageScanner.ts",
-    "legitimate-scan": "ts-node src/legitimateArbitrageScanner.ts",
-    "realtime-scan": "ts-node src/realTimeArbitrageScanner.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "scan": "npm run build && node dist/scanners/legitimateArbitrageScanner.js",
+    "legitimate-scan": "npm run build && node dist/scanners/legitimateArbitrageScanner.js",
+    "real-time-scan": "npm run build && node dist/scanners/realTimeScanner.js",
+    "test": "jest",
+    "test:fast": "node scripts/fastTestRunner.js",
+    "test:quick": "node scripts/fastTestRunner.js --quick",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:critical": "jest tests/utils tests/scanners/legitimateArbitrageScanner.test.ts",
+    "test:errors": "jest tests/errorHandling",
+    "test:performance": "jest tests/performance",
+    "test:market": "jest tests/marketSimulation",
+    "test:extended": "jest tests/errorHandling tests/performance tests/marketSimulation",
+    "test:advanced": "jest tests/advanced",
+    "test:security": "jest tests/advanced/securityValidation.test.ts",
+    "test:integration": "jest tests/advanced/integrationComplexity.test.ts",
+    "test:all": "jest --maxWorkers=4",
+    "test:verbose": "jest --verbose",
+    "docs:showcase": "node scripts/showcaseTestFramework.js"
   },
   "keywords": [
     "solana",
@@ -29,7 +45,10 @@
   "license": "ISC",
   "description": "Solana arbitrage scanner monitoring multiple DEXes",
   "devDependencies": {
+    "@types/jest": "^29.5.14",
     "@types/node": "^22.15.29",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.3.4",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3"
   },
