@@ -1,523 +1,502 @@
 import 'dotenv/config';
-import { JupiterClient } from './utils/jupiterClient';
-import { getTokenBySymbol } from './utils/tokenUtils';
+import { Connection } from '@solana/web3.js';
+import { OptimizedPriceCollector, TokenPair, DEXPriceMap } from './utils/optimizedPriceCollector';
+import { ArbitrageAnalyzer, ArbitrageAnalysisResult } from './utils/arbitrageAnalyzer';
 import Decimal from 'decimal.js';
-import path from 'path';
+import * as path from 'path';
 
 // Use require for csv-writer to avoid ES module issues
 const createCsvWriter = require('csv-writer');
 
-interface DexPrice {
-  dex: string;
-  price: Decimal;
-  outputAmount: Decimal;
-  inputAmount: Decimal;
-  priceImpact: Decimal;
-  route?: any;
-}
-
-interface ArbitrageOpportunity {
-  pair: string;
-  buyDex: string;
-  sellDex: string;
-  buyPrice: Decimal;
-  sellPrice: Decimal;
-  profit: Decimal;
-  profitPercentage: Decimal;
-  timestamp: string;
-}
-
-interface PriceDataRecord {
-  timestamp: string;
+interface ScanResult {
   scanNumber: number;
+  timestamp: string;
   pair: string;
-  dex: string;
-  price: number;
-  inputAmount: number;
-  outputAmount: number;
-  priceImpact: number;
-  hasArbitrage: boolean;
-  arbitrageBuyDex: string;
-  arbitrageSellDex: string;
-  arbitrageProfitPercent: number;
-  arbitrageProfitAmount: number;
-  bestArbitrageOfScan: boolean;
-  scanDurationMs: number;
+  analysisResult: ArbitrageAnalysisResult;
+  priceCollectionTime: number;
+  analysisTime: number;
+  totalTime: number;
 }
 
-interface ScanBatch {
-  pairs: Array<{ from: string; to: string; amount: Decimal }>;
-  batchId: number;
+interface ScanMetrics {
+  totalScans: number;
+  totalOpportunities: number;
+  viableOpportunities: number;
+  averageAnalysisTime: number;
+  averageDataQuality: number;
+  successfulPriceCollections: number;
+  failedPriceCollections: number;
 }
 
-class OptimizedArbitrageScanner {
-  private jupiterClient: JupiterClient;
-  private priceDataWriter: any;
+/**
+ * Optimized Arbitrage Scanner with Parallel Price Collection
+ * Implements the client's requested optimization strategy
+ */
+export class OptimizedArbitrageScanner {
+  private connection: Connection;
+  private priceCollector: OptimizedPriceCollector;
+  private arbitrageAnalyzer: ArbitrageAnalyzer;
+  private csvWriter: any;
   private csvFilePath: string = '';
-  private isRunning: boolean = false;
   private scanCounter: number = 0;
-  private totalRecords: number = 0;
-  private startTime: number = 0;
+  private scanResults: ScanResult[] = [];
+  private metrics: ScanMetrics;
 
   constructor() {
-    this.jupiterClient = new JupiterClient();
+    this.connection = new Connection(
+      process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com',
+      'confirmed'
+    );
+    
+    this.priceCollector = new OptimizedPriceCollector();
+    this.arbitrageAnalyzer = new ArbitrageAnalyzer();
+    this.metrics = this.initializeMetrics();
     this.setupCSVWriter();
   }
 
+  private initializeMetrics(): ScanMetrics {
+    return {
+      totalScans: 0,
+      totalOpportunities: 0,
+      viableOpportunities: 0,
+      averageAnalysisTime: 0,
+      averageDataQuality: 0,
+      successfulPriceCollections: 0,
+      failedPriceCollections: 0
+    };
+  }
+
   private setupCSVWriter() {
-    // Create data directory if it doesn't exist
     const dataDir = path.join(process.cwd(), 'data');
     if (!require('fs').existsSync(dataDir)) {
       require('fs').mkdirSync(dataDir, { recursive: true });
     }
 
-    // Create CSV file with timestamp
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     this.csvFilePath = path.join(dataDir, `optimized_arbitrage_${timestamp}.csv`);
 
-    this.priceDataWriter = createCsvWriter.createObjectCsvWriter({
+    this.csvWriter = createCsvWriter.createObjectCsvWriter({
       path: this.csvFilePath,
       header: [
         { id: 'timestamp', title: 'Timestamp' },
         { id: 'scanNumber', title: 'Scan Number' },
         { id: 'pair', title: 'Trading Pair' },
-        { id: 'dex', title: 'DEX' },
-        { id: 'price', title: 'Price' },
-        { id: 'inputAmount', title: 'Input Amount' },
-        { id: 'outputAmount', title: 'Output Amount' },
-        { id: 'priceImpact', title: 'Price Impact (%)' },
-        { id: 'hasArbitrage', title: 'Has Arbitrage' },
-        { id: 'arbitrageBuyDex', title: 'Arbitrage Buy DEX' },
-        { id: 'arbitrageSellDex', title: 'Arbitrage Sell DEX' },
-        { id: 'arbitrageProfitPercent', title: 'Arbitrage Profit (%)' },
-        { id: 'arbitrageProfitAmount', title: 'Arbitrage Profit Amount' },
-        { id: 'bestArbitrageOfScan', title: 'Best Arbitrage of Scan' },
-        { id: 'scanDurationMs', title: 'Scan Duration (ms)' }
+        { id: 'totalOpportunities', title: 'Opportunities Found' },
+        { id: 'viableOpportunities', title: 'Viable Opportunities' },
+        { id: 'bestSpread', title: 'Best Spread (%)' },
+        { id: 'bestBuyDex', title: 'Best Buy DEX' },
+        { id: 'bestSellDex', title: 'Best Sell DEX' },
+        { id: 'bestNetProfit', title: 'Best Net Profit' },
+        { id: 'marketEfficiency', title: 'Market Efficiency' },
+        { id: 'dataQuality', title: 'Data Quality' },
+        { id: 'priceCollectionTime', title: 'Price Collection (ms)' },
+        { id: 'analysisTime', title: 'Analysis Time (ms)' },
+        { id: 'totalTime', title: 'Total Time (ms)' },
+        { id: 'raydiumPrice', title: 'Raydium Price' },
+        { id: 'raydiumResponseTime', title: 'Raydium Response (ms)' },
+        { id: 'orcaPrice', title: 'Orca Price' },
+        { id: 'orcaResponseTime', title: 'Orca Response (ms)' },
+        { id: 'phoenixPrice', title: 'Phoenix Price' },
+        { id: 'phoenixResponseTime', title: 'Phoenix Response (ms)' },
+        { id: 'jupiterPrice', title: 'Jupiter Price' },
+        { id: 'jupiterResponseTime', title: 'Jupiter Response (ms)' },
+        { id: 'warnings', title: 'Warnings' },
+        { id: 'recommendations', title: 'Recommendations' }
       ]
     });
 
-    console.log(`📁 CSV data will be saved to: ${this.csvFilePath}`);
+    console.log('🚀 Optimized Arbitrage Scanner initialized');
+    console.log('📁 CSV output:', this.csvFilePath);
   }
 
-  async startOptimizedScanning() {
-    console.log('\n🚀 OPTIMIZED PARALLEL ARBITRAGE SCANNER');
-    console.log('═'.repeat(80));
-    console.log('⚡ Parallel scanning for maximum data collection');
-    console.log('📊 Building comprehensive CSV for client demonstration');
-    console.log('🎯 Target: 1000+ records across multiple DEXes\n');
+  /**
+   * Start the optimized scanning process
+   */
+  async startOptimizedScanning(options: {
+    pairs?: TokenPair[];
+    scanInterval?: number;
+    maxScans?: number;
+    enableCaching?: boolean;
+    logLevel?: 'verbose' | 'normal' | 'quiet';
+  } = {}) {
+    
+    console.log('\n🚀 === OPTIMIZED ARBITRAGE SCANNER ===');
+    console.log('⚡ Performance Optimization: Parallel Price Collection');
+    console.log('🔄 Strategy: Promise.allSettled for fault tolerance');
+    console.log('📊 Features: Statistical filtering, risk assessment, real-time metrics');
+    console.log('🎯 Purpose: Demonstrate optimized data collection patterns');
+    console.log('');
+    console.log('🔧 OPTIMIZATIONS IMPLEMENTED:');
+    console.log('   • Parallel API calls to Raydium, Orca, Phoenix, Jupiter');
+    console.log('   • Fault-tolerant error handling with Promise.allSettled');
+    console.log('   • Response time tracking and performance monitoring');
+    console.log('   • Statistical outlier detection and filtering');
+    console.log('   • Intelligent caching with expiry management');
+    console.log('   • Risk scoring and confidence calculation');
+    console.log('='.repeat(80));
 
-    this.isRunning = true;
-    this.startTime = Date.now();
+    const opts = {
+      pairs: this.getDefaultTradingPairs(),
+      scanInterval: 30000, // 30 seconds
+      maxScans: 100,
+      enableCaching: false, // Real-time for arbitrage
+      logLevel: 'normal' as const,
+      ...options
+    };
 
-    // Expanded list of trading pairs - optimized for variety and liquidity
-    const allPairs = [
-      // Major pairs - high liquidity
-      { from: 'SOL', to: 'USDC', amount: new Decimal(1) },
-      { from: 'SOL', to: 'USDT', amount: new Decimal(1) },
-      
-      // DeFi tokens with SOL
-      { from: 'RAY', to: 'SOL', amount: new Decimal(100) },
-      { from: 'ORCA', to: 'SOL', amount: new Decimal(100) },
-      { from: 'JUP', to: 'SOL', amount: new Decimal(100) },
-      { from: 'SRM', to: 'SOL', amount: new Decimal(100) },
-      { from: 'FIDA', to: 'SOL', amount: new Decimal(100) },
-      { from: 'MNGO', to: 'SOL', amount: new Decimal(100) },
-      
-      // Meme tokens - high volatility
-      { from: 'BONK', to: 'SOL', amount: new Decimal(1000000) },
-      { from: 'WIF', to: 'SOL', amount: new Decimal(100) },
-      { from: 'SAMO', to: 'SOL', amount: new Decimal(1000) },
-      
-      // Gaming tokens
-      { from: 'ATLAS', to: 'SOL', amount: new Decimal(10000) },
-      { from: 'POLIS', to: 'SOL', amount: new Decimal(1000) },
-      { from: 'GMT', to: 'SOL', amount: new Decimal(100) },
-      
-      // Less common tokens
-      { from: 'STEP', to: 'SOL', amount: new Decimal(100) },
-      { from: 'COPE', to: 'SOL', amount: new Decimal(100) },
-      { from: 'SLND', to: 'SOL', amount: new Decimal(100) },
-      
-      // USDC pairs for more arbitrage opportunities
-      { from: 'RAY', to: 'USDC', amount: new Decimal(100) },
-      { from: 'ORCA', to: 'USDC', amount: new Decimal(100) },
-      { from: 'JUP', to: 'USDC', amount: new Decimal(100) },
-      { from: 'BONK', to: 'USDC', amount: new Decimal(1000000) },
-      { from: 'WIF', to: 'USDC', amount: new Decimal(100) },
-      { from: 'SAMO', to: 'USDC', amount: new Decimal(1000) },
-      { from: 'GMT', to: 'USDC', amount: new Decimal(100) },
-      
-      // USDT pairs
-      { from: 'RAY', to: 'USDT', amount: new Decimal(100) },
-      { from: 'ORCA', to: 'USDT', amount: new Decimal(100) },
-      { from: 'JUP', to: 'USDT', amount: new Decimal(100) },
-      { from: 'WIF', to: 'USDT', amount: new Decimal(100) },
-      
-      // Token-to-token pairs (often have best arbitrage)
-      { from: 'RAY', to: 'ORCA', amount: new Decimal(100) },
-      { from: 'RAY', to: 'JUP', amount: new Decimal(100) },
-      { from: 'ORCA', to: 'JUP', amount: new Decimal(100) },
-      { from: 'BONK', to: 'WIF', amount: new Decimal(1000000) },
-      { from: 'BONK', to: 'SAMO', amount: new Decimal(1000000) },
-      { from: 'WIF', to: 'SAMO', amount: new Decimal(100) },
-      { from: 'ATLAS', to: 'POLIS', amount: new Decimal(1000) },
-      { from: 'FIDA', to: 'SRM', amount: new Decimal(100) },
-      { from: 'GMT', to: 'STEP', amount: new Decimal(100) },
-    ];
+    console.log(`📈 Monitoring ${opts.pairs.length} trading pairs`);
+    console.log(`⏱️  Scan interval: ${opts.scanInterval / 1000}s`);
+    console.log(`🎯 Max scans: ${opts.maxScans}`);
+    console.log(`📊 Optimizations: Parallel collection, statistical filtering`);
+    console.log('');
 
-    // Create batches for parallel processing
-    const batchSize = 6; // Process 6 pairs at once to avoid rate limits
-    const batches = this.createBatches(allPairs, batchSize);
-
-    console.log(`📦 Created ${batches.length} batches with ${batchSize} pairs each`);
-    console.log(`🎯 Total pairs to scan: ${allPairs.length}`);
-
-    while (this.isRunning) {
+    while (this.scanCounter < opts.maxScans) {
       this.scanCounter++;
-      console.log(`\n🔄 PARALLEL SCAN #${this.scanCounter}`);
-      console.log('═'.repeat(100));
-
-      const scanStartTime = Date.now();
-      await this.runParallelScan(batches);
-      const scanDuration = Date.now() - scanStartTime;
-
-      const totalTime = Math.round((Date.now() - this.startTime) / 1000);
-      console.log(`\n✅ Scan #${this.scanCounter} completed in ${scanDuration}ms`);
-      console.log(`📊 Total records: ${this.totalRecords} | Runtime: ${totalTime}s`);
-      console.log(`📈 Average: ${Math.round(this.totalRecords / this.scanCounter)} records/scan`);
-
-      // Stop after collecting substantial data (or run indefinitely)
-      if (this.totalRecords >= 2000) {
-        console.log(`\n🎉 TARGET REACHED! Generated ${this.totalRecords} records for client demo`);
-        break;
-      }
-
-      // Delay between complete scans
-      await this.sleep(10000); // 10 seconds between full scans
-    }
-
-    console.log(`\n📁 Final CSV saved to: ${this.csvFilePath}`);
-    console.log(`📊 Total data points collected: ${this.totalRecords}`);
-  }
-
-  private createBatches(pairs: Array<{ from: string; to: string; amount: Decimal }>, batchSize: number): ScanBatch[] {
-    const batches: ScanBatch[] = [];
-    for (let i = 0; i < pairs.length; i += batchSize) {
-      batches.push({
-        pairs: pairs.slice(i, i + batchSize),
-        batchId: Math.floor(i / batchSize) + 1
-      });
-    }
-    return batches;
-  }
-
-  private async runParallelScan(batches: ScanBatch[]) {
-    const scanStartTime = Date.now();
-    const isoTimestamp = new Date().toISOString();
-
-    for (const batch of batches) {
-      console.log(`\n📦 Processing Batch ${batch.batchId} (${batch.pairs.length} pairs):`);
       
-      // Process all pairs in this batch in parallel
-      const batchPromises = batch.pairs.map(async (pair, index) => {
-        try {
-          console.log(`   🔍 [${batch.batchId}.${index + 1}] ${pair.from}/${pair.to}`);
-          const dexPrices = await this.getPricesFromAllDexes(pair.from, pair.to, pair.amount);
-          
-          if (dexPrices.length >= 2) {
-            const opportunities = this.findArbitrageOpportunities(dexPrices, `${pair.from}/${pair.to}`);
-            
-            // Show quick summary
-            if (opportunities.length > 0) {
-              const best = opportunities[0];
-              console.log(`   💰 Best: ${best.profitPercentage.toFixed(3)}% (${best.buyDex} → ${best.sellDex})`);
-            }
-            
-            return {
-              pair: `${pair.from}/${pair.to}`,
-              dexPrices,
-              opportunities,
-              scanDuration: Date.now() - scanStartTime
-            };
-          }
-        } catch (error) {
-          console.log(`   ❌ ${pair.from}/${pair.to}: ${error instanceof Error ? error.message.slice(0, 50) : 'Error'}`);
-        }
-        return null;
-      });
+      if (opts.logLevel !== 'quiet') {
+        console.log(`\n🔍 OPTIMIZED SCAN CYCLE ${this.scanCounter}`);
+        console.log('-'.repeat(60));
+        console.log(`🕒 Start time: ${new Date().toISOString()}`);
+      }
 
-      // Wait for all pairs in this batch to complete
-      const batchResults = await Promise.allSettled(batchPromises);
+      const cycleStartTime = Date.now();
       
-      // Process results and convert to CSV
-      const batchData: PriceDataRecord[] = [];
-      let bestArbitrage: ArbitrageOpportunity | null = null;
-
-      batchResults.forEach((result) => {
-        if (result.status === 'fulfilled' && result.value) {
-          const { pair, dexPrices, opportunities, scanDuration } = result.value;
-          
-          // Track best arbitrage across all batches
-          if (opportunities.length > 0 && (!bestArbitrage || opportunities[0].profitPercentage.gt(bestArbitrage.profitPercentage))) {
-            bestArbitrage = opportunities[0];
-          }
-
-          // Convert to CSV records
-          const csvRecords = this.convertToCsvRecords(
-            dexPrices, 
-            opportunities, 
-            pair, 
-            isoTimestamp, 
-            this.scanCounter,
-            scanDuration
-          );
-          batchData.push(...csvRecords);
-        }
-      });
-
-      // Mark best arbitrage for this batch
-      if (bestArbitrage) {
-        batchData.forEach(record => {
-          if (record.pair === bestArbitrage!.pair && 
-              Math.abs(record.arbitrageProfitPercent - bestArbitrage!.profitPercentage.toNumber()) < 0.001) {
-            record.bestArbitrageOfScan = true;
-          }
-        });
-      }
-
-      // Write batch data to CSV immediately
-      if (batchData.length > 0) {
-        await this.writeDataToCSV(batchData);
-        this.totalRecords += batchData.length;
-        console.log(`   💾 Batch ${batch.batchId}: ${batchData.length} records written`);
-      }
-
-      // Small delay between batches to respect rate limits
-      await this.sleep(2000);
-    }
-  }
-
-  async getPricesFromAllDexes(fromSymbol: string, toSymbol: string, amount: Decimal): Promise<DexPrice[]> {
-    const fromToken = getTokenBySymbol(fromSymbol);
-    const toToken = getTokenBySymbol(toSymbol);
-
-    if (!fromToken || !toToken) {
-      throw new Error(`Unknown token: ${fromSymbol} or ${toSymbol}`);
-    }
-
-    const dexPrices: DexPrice[] = [];
-    const seenDexes = new Set<string>();
-
-    // Optimized quote requests for speed
-    const quoteRequests = [
-      { slippage: 50, onlyDirect: false },
-      { slippage: 100, onlyDirect: true },
-      { slippage: 200, onlyDirect: false },
-    ];
-
-    const requestPromises = quoteRequests.map(async (request) => {
-      try {
-        const quote = await this.jupiterClient.getQuote(
-          fromToken.mint.toString(),
-          toToken.mint.toString(),
-          amount,
-          fromToken.decimals,
-          request.slippage
-        );
-
-        if (quote && quote.routePlan && quote.routePlan.length > 0) {
-          const newDexPrices: DexPrice[] = [];
-          
-          for (const routePlan of quote.routePlan) {
-            const dexLabel = routePlan.swapInfo.label;
-            const dexName = this.extractDexName(dexLabel);
-            
-            if (!seenDexes.has(dexName) && dexName && dexName !== 'Unknown') {
-              const outputAmount = new Decimal(quote.outAmount).div(
-                new Decimal(10).pow(toToken.decimals)
-              );
-              const price = outputAmount.div(amount);
-              const priceImpact = new Decimal(quote.priceImpactPct || 0);
-
-              newDexPrices.push({
-                dex: dexName,
-                price,
-                outputAmount,
-                inputAmount: amount,
-                priceImpact,
-                route: routePlan
-              });
-              
-              seenDexes.add(dexName);
-            }
-          }
-          return newDexPrices;
-        }
-      } catch (error) {
-        // Silently continue on errors to maintain speed
-      }
-      return [];
-    });
-
-    // Run all quote requests in parallel
-    const results = await Promise.allSettled(requestPromises);
-    
-    results.forEach(result => {
-      if (result.status === 'fulfilled') {
-        dexPrices.push(...result.value);
-      }
-    });
-
-    return dexPrices;
-  }
-
-  private extractDexName(label: string): string {
-    if (!label) return 'Unknown';
-    
-    const lowerLabel = label.toLowerCase();
-    
-    if (lowerLabel.includes('raydium')) return 'Raydium';
-    if (lowerLabel.includes('orca')) return 'Orca';
-    if (lowerLabel.includes('meteora')) return 'Meteora';
-    if (lowerLabel.includes('phoenix')) return 'Phoenix';
-    if (lowerLabel.includes('openbook')) return 'OpenBook';
-    if (lowerLabel.includes('whirlpool')) return 'Orca-Whirlpool';
-    if (lowerLabel.includes('lifinity')) return 'Lifinity';
-    if (lowerLabel.includes('solfi')) return 'SolFi';
-    if (lowerLabel.includes('zerofi')) return 'ZeroFi';
-    if (lowerLabel.includes('obric')) return 'Obric V2';
-    if (lowerLabel.includes('stabble')) return 'Stabble Stable Swap';
-    if (lowerLabel.includes('saros')) return 'Saros';
-    if (lowerLabel.includes('aldrin')) return 'Aldrin';
-    if (lowerLabel.includes('saber')) return 'Saber';
-    if (lowerLabel.includes('mercurial')) return 'Mercurial';
-    if (lowerLabel.includes('serum')) return 'Serum';
-    
-    if (lowerLabel.length > 2 && !lowerLabel.includes('unknown')) {
-      return label;
-    }
-    
-    return 'Unknown';
-  }
-
-  private findArbitrageOpportunities(dexPrices: DexPrice[], pair: string): ArbitrageOpportunity[] {
-    const opportunities: ArbitrageOpportunity[] = [];
-
-    for (let i = 0; i < dexPrices.length; i++) {
-      for (let j = i + 1; j < dexPrices.length; j++) {
-        const dex1 = dexPrices[i];
-        const dex2 = dexPrices[j];
-
-        if (dex1.price.gt(dex2.price)) {
-          const profit = dex1.price.sub(dex2.price);
-          const profitPercentage = profit.div(dex2.price).mul(100);
-
-          opportunities.push({
-            pair,
-            buyDex: dex2.dex,
-            sellDex: dex1.dex,
-            buyPrice: dex2.price,
-            sellPrice: dex1.price,
-            profit,
-            profitPercentage,
-            timestamp: new Date().toISOString()
-          });
-        } else if (dex2.price.gt(dex1.price)) {
-          const profit = dex2.price.sub(dex1.price);
-          const profitPercentage = profit.div(dex1.price).mul(100);
-
-          opportunities.push({
-            pair,
-            buyDex: dex1.dex,
-            sellDex: dex2.dex,
-            buyPrice: dex1.price,
-            sellPrice: dex2.price,
-            profit,
-            profitPercentage,
-            timestamp: new Date().toISOString()
-          });
-        }
-      }
-    }
-
-    return opportunities.sort((a, b) => b.profitPercentage.sub(a.profitPercentage).toNumber());
-  }
-
-  private convertToCsvRecords(
-    dexPrices: DexPrice[], 
-    opportunities: ArbitrageOpportunity[], 
-    pair: string, 
-    timestamp: string,
-    scanNumber: number,
-    scanDuration: number
-  ): PriceDataRecord[] {
-    const records: PriceDataRecord[] = [];
-
-    dexPrices.forEach(dexPrice => {
-      // Find best arbitrage opportunity involving this DEX
-      const arbitrageOpp = opportunities.find(opp => 
-        opp.buyDex === dexPrice.dex || opp.sellDex === dexPrice.dex
+      // Process all pairs in parallel for maximum efficiency
+      const scanPromises = opts.pairs.map(pair => 
+        this.analyzePairOptimized(pair, opts.enableCaching, opts.logLevel)
       );
 
-      records.push({
-        timestamp,
-        scanNumber,
-        pair,
-        dex: dexPrice.dex,
-        price: dexPrice.price.toNumber(),
-        inputAmount: dexPrice.inputAmount.toNumber(),
-        outputAmount: dexPrice.outputAmount.toNumber(),
-        priceImpact: dexPrice.priceImpact.toNumber(),
-        hasArbitrage: !!arbitrageOpp,
-        arbitrageBuyDex: arbitrageOpp?.buyDex || '',
-        arbitrageSellDex: arbitrageOpp?.sellDex || '',
-        arbitrageProfitPercent: arbitrageOpp?.profitPercentage.toNumber() || 0,
-        arbitrageProfitAmount: arbitrageOpp?.profit.toNumber() || 0,
-        bestArbitrageOfScan: false, // Will be set later
-        scanDurationMs: scanDuration
-      });
-    });
+      const scanResults = await Promise.allSettled(scanPromises);
+      
+      // Process results
+      const successfulScans = scanResults.filter(r => r.status === 'fulfilled')
+                                         .map(r => (r as PromiseFulfilledResult<ScanResult>).value);
+      
+      const failedScans = scanResults.filter(r => r.status === 'rejected').length;
 
-    return records;
+      const cycleTime = Date.now() - cycleStartTime;
+
+      // Update metrics
+      this.updateMetrics(successfulScans, failedScans);
+
+      // Log cycle results
+      if (opts.logLevel !== 'quiet') {
+        console.log(`✅ Cycle completed in ${Math.round(cycleTime / 1000)}s`);
+        console.log(`📊 Successful: ${successfulScans.length}, Failed: ${failedScans}`);
+        
+        const totalOpportunities = successfulScans.reduce((sum, scan) => 
+          sum + scan.analysisResult.analysis.totalOpportunities, 0);
+        const viableOpportunities = successfulScans.reduce((sum, scan) => 
+          sum + scan.analysisResult.analysis.viableOpportunities, 0);
+        
+        console.log(`🎯 Opportunities: ${totalOpportunities} total, ${viableOpportunities} viable`);
+        
+        if (opts.logLevel === 'verbose') {
+          this.logDetailedResults(successfulScans);
+        }
+      }
+
+      // Write results to CSV
+      await this.writeResultsToCSV(successfulScans);
+
+      // Performance monitoring
+      this.monitorPerformance();
+
+      // Wait for next cycle
+      if (this.scanCounter < opts.maxScans) {
+        if (opts.logLevel !== 'quiet') {
+          console.log(`⏳ Waiting ${opts.scanInterval / 1000}s before next scan...`);
+        }
+        await this.sleep(opts.scanInterval);
+      }
+    }
+
+    console.log('\n🏁 Scanning completed!');
+    console.log(`📊 Final Statistics:`);
+    console.log(`   Total scans: ${this.metrics.totalScans}`);
+    console.log(`   Total opportunities: ${this.metrics.totalOpportunities}`);
+    console.log(`   Viable opportunities: ${this.metrics.viableOpportunities}`);
+    console.log(`   Average analysis time: ${this.metrics.averageAnalysisTime.toFixed(1)}ms`);
+    console.log(`   Average data quality: ${(this.metrics.averageDataQuality * 100).toFixed(1)}%`);
+    console.log(`   Success rate: ${(this.metrics.successfulPriceCollections / (this.metrics.successfulPriceCollections + this.metrics.failedPriceCollections) * 100).toFixed(1)}%`);
   }
 
-  private async writeDataToCSV(records: PriceDataRecord[]) {
+  /**
+   * Analyze a single trading pair using optimized price collection
+   */
+  private async analyzePairOptimized(
+    tokenPair: TokenPair, 
+    enableCaching: boolean,
+    logLevel: 'verbose' | 'normal' | 'quiet'
+  ): Promise<ScanResult> {
+    const scanStartTime = Date.now();
+    
     try {
-      await this.priceDataWriter.writeRecords(records);
+      if (logLevel === 'verbose') {
+        console.log(`🔄 Analyzing ${tokenPair.from}/${tokenPair.to} with parallel collection...`);
+      }
+
+      // Phase 1: Optimized parallel price collection
+      const priceCollectionStart = Date.now();
+      
+      // THIS IS THE CLIENT'S REQUESTED OPTIMIZATION:
+      // Instead of multiple API calls per pair, implement parallel price collection
+      const priceData = await this.priceCollector.collectRealPrices(tokenPair, {
+        timeout: 3000,
+        includeJupiterAggregated: true,
+        enableCaching: enableCaching,
+        cacheExpiryMs: 5000 // 5 second cache for arbitrage
+      });
+      
+      const priceCollectionTime = Date.now() - priceCollectionStart;
+
+      // Phase 2: Arbitrage analysis with statistical filtering
+      const analysisStart = Date.now();
+      
+      const analysisResult = await this.arbitrageAnalyzer.analyzeArbitrageOpportunities(
+        tokenPair,
+        {
+          minProfitThreshold: new Decimal(0.0005), // 0.05% minimum
+          maxRiskScore: 0.8,
+          includeGasCosts: true,
+          estimatedGasPrice: new Decimal(0.005),
+          maxPriceImpact: new Decimal(0.02),
+          requireLiquidity: true,
+          enableStatisticalFiltering: true
+        }
+      );
+
+      const analysisTime = Date.now() - analysisStart;
+      const totalTime = Date.now() - scanStartTime;
+
+      // Log results
+      if (logLevel === 'verbose') {
+        console.log(`  ⚡ Price collection: ${priceCollectionTime}ms (${priceData.metadata.successfulSources}/${priceData.metadata.successfulSources + priceData.metadata.failedSources} sources)`);
+        console.log(`  🧮 Analysis: ${analysisTime}ms`);
+        console.log(`  📊 Found: ${analysisResult.opportunities.length} opportunities`);
+        
+        if (analysisResult.opportunities.length > 0) {
+          const best = analysisResult.opportunities[0];
+          console.log(`  🎯 Best: ${best.spreadPercentage.mul(100).toFixed(3)}% spread (${best.buyDex} → ${best.sellDex})`);
+        }
+
+        if (analysisResult.warnings.length > 0) {
+          console.log(`  ⚠️  Warnings: ${analysisResult.warnings.length}`);
+        }
+      }
+
+      return {
+        scanNumber: this.scanCounter,
+        timestamp: new Date().toISOString(),
+        pair: `${tokenPair.from}/${tokenPair.to}`,
+        analysisResult,
+        priceCollectionTime,
+        analysisTime,
+        totalTime
+      };
+
     } catch (error) {
-      console.error('❌ Error writing to CSV:', error);
+      // Create error result
+      const errorResult: ArbitrageAnalysisResult = {
+        opportunities: [],
+        priceData: { 
+          metadata: { 
+            totalResponseTime: 0, 
+            successfulSources: 0, 
+            failedSources: 1, 
+            timestamp: Date.now(), 
+            requestId: 'error' 
+          } 
+        },
+        analysis: {
+          totalOpportunities: 0,
+          viableOpportunities: 0,
+          averageSpread: new Decimal(0),
+          maxSpread: new Decimal(0),
+          marketEfficiency: 1,
+          dataQuality: 0,
+          analysisTime: 0
+        },
+        warnings: [`Analysis failed: ${(error as Error).message}`],
+        recommendations: ['Check network connectivity and API endpoints']
+      };
+
+      return {
+        scanNumber: this.scanCounter,
+        timestamp: new Date().toISOString(),
+        pair: `${tokenPair.from}/${tokenPair.to}`,
+        analysisResult: errorResult,
+        priceCollectionTime: 0,
+        analysisTime: 0,
+        totalTime: Date.now() - scanStartTime
+      };
     }
   }
 
-  stop() {
-    this.isRunning = false;
-    console.log('\n🛑 Optimized scanner stopped');
-    console.log(`📁 Final data saved to: ${this.csvFilePath}`);
-    console.log(`📊 Total records generated: ${this.totalRecords}`);
+  /**
+   * Get default trading pairs for scanning
+   */
+  private getDefaultTradingPairs(): TokenPair[] {
+    return [
+      { from: 'SOL', to: 'USDC', amount: new Decimal(1) },
+      { from: 'SOL', to: 'USDT', amount: new Decimal(1) },
+      { from: 'RAY', to: 'SOL', amount: new Decimal(100) },
+      { from: 'RAY', to: 'USDC', amount: new Decimal(100) },
+      { from: 'ORCA', to: 'SOL', amount: new Decimal(100) },
+      { from: 'JUP', to: 'SOL', amount: new Decimal(100) },
+      { from: 'BONK', to: 'SOL', amount: new Decimal(1000000) },
+      { from: 'WIF', to: 'SOL', amount: new Decimal(100) }
+    ];
   }
 
+  /**
+   * Update performance metrics
+   */
+  private updateMetrics(successfulScans: ScanResult[], failedScans: number): void {
+    this.metrics.totalScans += successfulScans.length + failedScans;
+    this.metrics.successfulPriceCollections += successfulScans.length;
+    this.metrics.failedPriceCollections += failedScans;
+
+    const totalOpportunities = successfulScans.reduce((sum, scan) => 
+      sum + scan.analysisResult.analysis.totalOpportunities, 0);
+    const viableOpportunities = successfulScans.reduce((sum, scan) => 
+      sum + scan.analysisResult.analysis.viableOpportunities, 0);
+    
+    this.metrics.totalOpportunities += totalOpportunities;
+    this.metrics.viableOpportunities += viableOpportunities;
+
+    // Update running averages
+    const newAnalysisTime = successfulScans.reduce((sum, scan) => sum + scan.analysisTime, 0) / successfulScans.length;
+    const newDataQuality = successfulScans.reduce((sum, scan) => sum + scan.analysisResult.analysis.dataQuality, 0) / successfulScans.length;
+
+    this.metrics.averageAnalysisTime = (this.metrics.averageAnalysisTime + newAnalysisTime) / 2;
+    this.metrics.averageDataQuality = (this.metrics.averageDataQuality + newDataQuality) / 2;
+  }
+
+  /**
+   * Log detailed results for verbose mode
+   */
+  private logDetailedResults(scanResults: ScanResult[]): void {
+    console.log('\n📋 Detailed Results:');
+    
+    scanResults.forEach(result => {
+      const { pair, analysisResult, priceCollectionTime, analysisTime } = result;
+      const { priceData, opportunities, analysis } = analysisResult;
+
+      console.log(`\n  📊 ${pair}:`);
+      console.log(`     Collection: ${priceCollectionTime}ms, Analysis: ${analysisTime}ms`);
+      console.log(`     Sources: ${priceData.metadata.successfulSources} successful, ${priceData.metadata.failedSources} failed`);
+      console.log(`     Quality: ${(analysis.dataQuality * 100).toFixed(1)}%, Efficiency: ${(analysis.marketEfficiency * 100).toFixed(1)}%`);
+      
+      if (opportunities.length > 0) {
+        const best = opportunities[0];
+        console.log(`     Best: ${best.spreadPercentage.mul(100).toFixed(3)}% (${best.buyDex} → ${best.sellDex})`);
+      } else {
+        console.log(`     No opportunities found`);
+      }
+
+      if (analysisResult.warnings.length > 0) {
+        console.log(`     Warnings: ${analysisResult.warnings.slice(0, 2).join(', ')}`);
+      }
+    });
+  }
+
+  /**
+   * Monitor and log performance metrics
+   */
+  private monitorPerformance(): void {
+    // Clear expired cache entries periodically
+    const cleared = this.priceCollector.clearExpiredCache();
+    const cacheStats = this.priceCollector.getCacheStats();
+    
+    if (this.scanCounter % 10 === 0) { // Every 10 scans
+      console.log(`\n📈 Performance Monitor (Scan ${this.scanCounter}):`);
+      console.log(`   Cache: ${cacheStats.size} entries, ${cleared} expired cleared`);
+      console.log(`   Success rate: ${(this.metrics.successfulPriceCollections / (this.metrics.successfulPriceCollections + this.metrics.failedPriceCollections) * 100).toFixed(1)}%`);
+      console.log(`   Avg analysis time: ${this.metrics.averageAnalysisTime.toFixed(1)}ms`);
+      console.log(`   Avg data quality: ${(this.metrics.averageDataQuality * 100).toFixed(1)}%`);
+    }
+  }
+
+  /**
+   * Write scan results to CSV
+   */
+  private async writeResultsToCSV(scanResults: ScanResult[]): Promise<void> {
+    const csvRecords = scanResults.map(result => {
+      const { analysisResult, priceCollectionTime, analysisTime, totalTime } = result;
+      const { opportunities, priceData, analysis } = analysisResult;
+      
+      const bestOpportunity = opportunities.length > 0 ? opportunities[0] : null;
+
+      return {
+        timestamp: result.timestamp,
+        scanNumber: result.scanNumber,
+        pair: result.pair,
+        totalOpportunities: analysis.totalOpportunities,
+        viableOpportunities: analysis.viableOpportunities,
+        bestSpread: bestOpportunity ? bestOpportunity.spreadPercentage.mul(100).toNumber() : 0,
+        bestBuyDex: bestOpportunity ? bestOpportunity.buyDex : '',
+        bestSellDex: bestOpportunity ? bestOpportunity.sellDex : '',
+        bestNetProfit: bestOpportunity ? bestOpportunity.netProfit.toNumber() : 0,
+        marketEfficiency: analysis.marketEfficiency,
+        dataQuality: analysis.dataQuality,
+        priceCollectionTime,
+        analysisTime,
+        totalTime,
+        raydiumPrice: priceData.raydium ? priceData.raydium.price.toNumber() : 0,
+        raydiumResponseTime: priceData.raydium ? priceData.raydium.responseTime : 0,
+        orcaPrice: priceData.orca ? priceData.orca.price.toNumber() : 0,
+        orcaResponseTime: priceData.orca ? priceData.orca.responseTime : 0,
+        phoenixPrice: priceData.phoenix ? priceData.phoenix.price.toNumber() : 0,
+        phoenixResponseTime: priceData.phoenix ? priceData.phoenix.responseTime : 0,
+        jupiterPrice: priceData.jupiter ? priceData.jupiter.price.toNumber() : 0,
+        jupiterResponseTime: priceData.jupiter ? priceData.jupiter.responseTime : 0,
+        warnings: analysisResult.warnings.join('; '),
+        recommendations: analysisResult.recommendations.join('; ')
+      };
+    });
+
+    if (csvRecords.length > 0) {
+      await this.csvWriter.writeRecords(csvRecords);
+    }
+  }
+
+  /**
+   * Utility: Sleep function
+   */
   private sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
+
+  /**
+   * Get current performance metrics
+   */
+  public getMetrics(): ScanMetrics {
+    return { ...this.metrics };
+  }
+
+  /**
+   * Get arbitrage statistics from analyzer
+   */
+  public getArbitrageStatistics() {
+    return this.arbitrageAnalyzer.getArbitrageStatistics();
+  }
 }
 
-// Handle graceful shutdown
-const scanner = new OptimizedArbitrageScanner();
+// Export for testing and usage
+export default OptimizedArbitrageScanner;
 
-process.on('SIGINT', () => {
-  console.log('\n\n🛑 Received interrupt signal...');
-  scanner.stop();
-  process.exit(0);
-});
-
-process.on('SIGTERM', () => {
-  console.log('\n\n🛑 Received terminate signal...');
-  scanner.stop();
-  process.exit(0);
-});
-
-// Start the optimized scanner
-scanner.startOptimizedScanning().catch(error => {
-  console.error('💥 Optimized scanner failed:', error.message);
-  process.exit(1);
-}); 
+// CLI execution
+if (require.main === module) {
+  const scanner = new OptimizedArbitrageScanner();
+  
+  scanner.startOptimizedScanning({
+    scanInterval: 30000, // 30 seconds
+    maxScans: 50,
+    enableCaching: false, // Real-time for arbitrage
+    logLevel: 'normal'
+  }).catch(error => {
+    console.error('❌ Scanner error:', error);
+    process.exit(1);
+  });
+} 

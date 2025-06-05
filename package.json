@@ -33,7 +33,13 @@
     "test:integration": "jest tests/advanced/integrationComplexity.test.ts",
     "test:all": "jest --maxWorkers=4",
     "test:verbose": "jest --verbose",
-    "docs:showcase": "node scripts/showcaseTestFramework.js"
+    "test:optimized": "jest tests/utils/optimizedPriceCollector.test.ts tests/utils/arbitrageAnalyzer.test.ts",
+    "test:collector": "jest tests/utils/optimizedPriceCollector.test.ts",
+    "test:analyzer": "jest tests/utils/arbitrageAnalyzer.test.ts",
+    "docs:showcase": "node scripts/showcaseTestFramework.js",
+    "quick-test": "ts-node src/quickOptimizedTest.ts",
+    "realtime-scan": "ts-node src/realTimeArbitrageScanner.ts",
+    "test-pool-monitor": "ts-node src/testRealTimeMonitoring.ts"
   },
   "keywords": [
     "solana",
